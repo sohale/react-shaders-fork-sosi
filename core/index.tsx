@@ -136,7 +136,7 @@ type Props = {
   precision?: 'highp' | 'lowp' | 'mediump'
 
   /** Custom inline style for canvas. */
-  style?: CSSStyleDeclaration
+  style?: CSSProperties
 
   /** Customize WebGL context attributes. See [the WebGL docs](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getContextAttributes) for details. */
   contextAttributes?: Record<string, unknown>
