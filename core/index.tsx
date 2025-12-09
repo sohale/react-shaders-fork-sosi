@@ -367,6 +367,15 @@ export class Shader extends Component<Props, unknown> {
       this.canvas.addEventListener('touchend', this.mouseUp, options)
       this.canvas.addEventListener('touchstart', this.mouseDown, options)
     }
+    // Handle WebGL context lifecycle events
+    if (this.canvas) {
+      this.canvas.addEventListener('webglcontextlost', this.onContextLost as EventListener, {
+        passive: false,
+      })
+      this.canvas.addEventListener('webglcontextrestored', this.onContextRestored as EventListener, {
+        passive: true,
+      })
+    }
     if (this.uniforms.iDeviceOrientation?.isNeeded) {
       window.addEventListener('deviceorientation', this.onDeviceOrientationChange, options)
     }
@@ -383,10 +392,33 @@ export class Shader extends Component<Props, unknown> {
       this.canvas.removeEventListener('touchend', this.mouseUp, options)
       this.canvas.removeEventListener('touchstart', this.mouseDown, options)
     }
+    if (this.canvas) {
+      this.canvas.removeEventListener('webglcontextlost', this.onContextLost as EventListener, {
+        passive: false,
+      } as EventListenerOptions)
+      this.canvas.removeEventListener(
+        'webglcontextrestored',
+        this.onContextRestored as EventListener,
+        { passive: true } as EventListenerOptions,
+      )
+    }
     if (this.uniforms.iDeviceOrientation?.isNeeded) {
       window.removeEventListener('deviceorientation', this.onDeviceOrientationChange, options)
     }
     window.removeEventListener('resize', this.onResize, options)
+  }
+  onContextLost = (e: Event) => {
+    // Prevent default so browser doesn’t try to keep rendering a broken context
+    e.preventDefault()
+    cancelAnimationFrame(this.animFrameId ?? 0)
+  }
+  onContextRestored = () => {
+    // Reinitialize the context and relink program, then resume loop
+    this.reinitWebGL()
+    const { fs, vs = BASIC_VS } = this.props
+    this.initShaders(this.preProcessFragment(fs || BASIC_FS), vs)
+    if (!this.squareVerticesBuffer) this.initBuffers()
+    this.animFrameId = requestAnimationFrame(this.drawScene)
   }
   onDeviceOrientationChange = ({ alpha, beta, gamma }: DeviceOrientationEvent) => {
     // @ts-expect-error TODO: Deal with this.
