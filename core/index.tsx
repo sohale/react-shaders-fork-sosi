@@ -209,6 +209,7 @@ export class Shader extends Component<Props, unknown> {
   }
   shouldComponentUpdate = (nextProps: Props) => {
     // Re-render when shader sources or key runtime-affecting props change
+    console.log('checking for updates of attributed/props');
     return (
       nextProps.fs !== this.props.fs ||
       nextProps.vs !== this.props.vs ||
