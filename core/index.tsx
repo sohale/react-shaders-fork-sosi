@@ -233,11 +233,31 @@ export class Shader extends Component<Props, unknown> {
     if (fsChanged || vsChanged || precisionChanged || dprChanged) {
       const { gl } = this
       if (!gl || !this.canvas) return
+      // Stop render loop during rebuild
+      cancelAnimationFrame(this.animFrameId ?? 0)
       // Tear down previous program
       if (this.shaderProgram) {
         gl.useProgram(null)
         gl.deleteProgram(this.shaderProgram)
         this.shaderProgram = null
+      }
+      // Delete existing textures to avoid leaking GPU memory
+      if (this.texturesArr.length > 0) {
+        for (const texture of this.texturesArr) {
+          // @ts-expect-error Accessing internal fields of Texture
+          const webTex = texture._webglTexture as WebGLTexture | null
+          if (webTex) gl.deleteTexture(webTex)
+          // @ts-expect-error Accessing internal fields of Texture
+          const src = texture.source as HTMLImageElement | HTMLVideoElement | undefined
+          if (src && src instanceof HTMLVideoElement) {
+            try {
+              src.pause()
+              src.src = ''
+              src.load()
+            } catch {}
+          }
+        }
+        this.texturesArr = []
       }
       // Re-process uniforms and textures as they depend on shader code
       this.uniforms = {
@@ -254,7 +274,8 @@ export class Shader extends Component<Props, unknown> {
       // Re-init shaders and buffers
       const { fs, vs = BASIC_VS } = this.props
       this.initShaders(this.preProcessFragment(fs || BASIC_FS), vs)
-      this.initBuffers()
+      if (!this.squareVerticesBuffer) this.initBuffers()
+      this.animFrameId = requestAnimationFrame(this.drawScene)
     } else if (uniformsChanged) {
       // Update uniforms without rebuilding the program
       this.processCustomUniforms()
@@ -269,16 +290,32 @@ export class Shader extends Component<Props, unknown> {
       gl.getExtension('WEBGL_lose_context')?.loseContext()
       gl.useProgram(null)
       gl.deleteProgram(this.shaderProgram ?? null)
+      // Stop animation loop to avoid draw calls during teardown
+      cancelAnimationFrame(this.animFrameId ?? 0)
+      // Delete textures and release media resources
       if (this.texturesArr.length > 0) {
         for (const texture of this.texturesArr) {
-          // @ts-expect-error TODO: Deal with this.
-          gl.deleteTexture(texture._webglTexture)
+          // @ts-expect-error Accessing internal fields of Texture
+          const webTex = texture._webglTexture as WebGLTexture | null
+          if (webTex) gl.deleteTexture(webTex)
+          // @ts-expect-error Accessing internal fields of Texture
+          const src = texture.source as HTMLImageElement | HTMLVideoElement | undefined
+          if (src && src instanceof HTMLVideoElement) {
+            try {
+              src.pause()
+              src.src = ''
+              src.load()
+            } catch {}
+          }
         }
       }
       this.shaderProgram = null
     }
     this.removeEventListeners()
-    cancelAnimationFrame(this.animFrameId ?? 0)
+    // Clear references to help GC
+    this.texturesArr = []
+    this.squareVerticesBuffer = null
+    this.canvas = undefined
   }
   setupChannelRes = ({ width, height }: Texture, id: number) => {
     const { devicePixelRatio = 1 } = this.props
@@ -293,6 +330,8 @@ export class Shader extends Component<Props, unknown> {
   initWebGL = () => {
     const { contextAttributes } = this.props
     if (!this.canvas) return
+    // If a context already exists, avoid creating a new one unless we explicitly reinitialize
+    if (this.gl) return
     this.gl = (this.canvas.getContext('webgl', contextAttributes) ||
       this.canvas.getContext(
         'experimental-webgl',
@@ -300,6 +339,15 @@ export class Shader extends Component<Props, unknown> {
       )) as WebGLRenderingContext | null
     this.gl?.getExtension('OES_standard_derivatives')
     this.gl?.getExtension('EXT_shader_texture_lod')
+  }
+
+  reinitWebGL = () => {
+    // Explicitly lose previous context before acquiring a new one
+    if (this.gl) {
+      this.gl.getExtension('WEBGL_lose_context')?.loseContext()
+      this.gl = null
+    }
+    this.initWebGL()
   }
   initBuffers = () => {
     const { gl } = this
