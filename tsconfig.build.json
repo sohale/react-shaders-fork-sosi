@@ -1,6 +1,16 @@
 {
-  "declaration": true,
-  "outDir": "dist",
-  treeshake: true,
-  sourcemap: true
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "declarationDir": "dist",
+    "sourceMap": true,
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+  },
+  "include": ["core/**/*"],
+  "exclude": ["node_modules", "build", "dist"]
 }
