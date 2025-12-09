@@ -207,7 +207,61 @@ export class Shader extends Component<Props, unknown> {
       this.onResize()
     }
   }
-  shouldComponentUpdate = () => false
+  shouldComponentUpdate = (nextProps: Props) => {
+    // Re-render when shader sources or key runtime-affecting props change
+    return (
+      nextProps.fs !== this.props.fs ||
+      nextProps.vs !== this.props.vs ||
+      nextProps.devicePixelRatio !== this.props.devicePixelRatio ||
+      nextProps.precision !== this.props.precision ||
+      nextProps.clearColor !== this.props.clearColor ||
+      nextProps.textures !== this.props.textures ||
+      nextProps.uniforms !== this.props.uniforms ||
+      nextProps.style !== this.props.style
+    )
+  }
+  componentDidUpdate(prevProps: Props) {
+    const fsChanged = prevProps.fs !== this.props.fs
+    const vsChanged = prevProps.vs !== this.props.vs
+    const uniformsChanged = prevProps.uniforms !== this.props.uniforms
+    const texturesChanged = prevProps.textures !== this.props.textures
+    const precisionChanged = prevProps.precision !== this.props.precision
+    const dprChanged = prevProps.devicePixelRatio !== this.props.devicePixelRatio
+
+    // If shader sources or configuration changed, rebuild program and buffers
+    if (fsChanged || vsChanged || precisionChanged || dprChanged) {
+      const { gl } = this
+      if (!gl || !this.canvas) return
+      // Tear down previous program
+      if (this.shaderProgram) {
+        gl.useProgram(null)
+        gl.deleteProgram(this.shaderProgram)
+        this.shaderProgram = null
+      }
+      // Re-process uniforms and textures as they depend on shader code
+      this.uniforms = {
+        iTime: { type: 'float', isNeeded: false, value: 0 },
+        iTimeDelta: { type: 'float', isNeeded: false, value: 0 },
+        iDate: { type: 'vec4', isNeeded: false, value: [0, 0, 0, 0] },
+        iMouse: { type: 'vec4', isNeeded: false, value: [0, 0, 0, 0] },
+        iResolution: { type: 'vec2', isNeeded: false, value: [0, 0] },
+        iFrame: { type: 'int', isNeeded: false, value: 0 },
+        iDeviceOrientation: { type: 'vec4', isNeeded: false, value: [0, 0, 0, 0] },
+      }
+      if (uniformsChanged) this.processCustomUniforms()
+      if (texturesChanged) this.processTextures()
+      // Re-init shaders and buffers
+      const { fs, vs = BASIC_VS } = this.props
+      this.initShaders(this.preProcessFragment(fs || BASIC_FS), vs)
+      this.initBuffers()
+    } else if (uniformsChanged) {
+      // Update uniforms without rebuilding the program
+      this.processCustomUniforms()
+    } else if (texturesChanged) {
+      // Re-process textures if textures set changed
+      this.processTextures()
+    }
+  }
   componentWillUnmount() {
     const { gl } = this
     if (gl) {
