@@ -209,16 +209,20 @@ export class Shader extends Component<Props, unknown> {
   }
   shouldComponentUpdate = (nextProps: Props) => {
     // Re-render when shader sources or key runtime-affecting props change
-    console.log('checking for updates of attributed/props');
+    console.log('Checking for updates of attributed/props');
     return (
       nextProps.fs !== this.props.fs ||
+      /*
+      // disable some for speed. These are not essential, except for `.fs` is.
       nextProps.vs !== this.props.vs ||
       nextProps.devicePixelRatio !== this.props.devicePixelRatio ||
       nextProps.precision !== this.props.precision ||
       nextProps.clearColor !== this.props.clearColor ||
       nextProps.textures !== this.props.textures ||
       nextProps.uniforms !== this.props.uniforms ||
-      nextProps.style !== this.props.style
+      nextProps.style !== this.props.style ||
+      */
+      false
     )
   }
   componentDidUpdate(prevProps: Props) {
