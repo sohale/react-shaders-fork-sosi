@@ -22,6 +22,7 @@
   "files": ["dist/**/*", "README.md", "package.json"],
   "scripts": {
     "build": "tsup",
+    "build:tsc": "tsc -p tsconfig.build.json",
     "prepare": "npm run build",
     "clean": "rm -rf dist",
     "check": "tsc",

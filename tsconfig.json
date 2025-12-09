@@ -1,13 +1,18 @@
 {
   "compilerOptions": {
     "composite": false,
+
+    "noEmit": false,
     "declaration": true,
     "declarationMap": true,
+    "outDir": "dist",
+    "declarationDir": "dist",
+
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "inlineSources": false,
     "isolatedModules": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noUncheckedIndexedAccess": true,
@@ -22,6 +27,6 @@
     "jsx": "preserve",
 
   },
-  "include": ["."],
+  "include": ["core/**/*"],
   "exclude": ["node_modules", "build", "dist"]
 }

@@ -1,0 +1,6 @@
+{
+  "declaration": true,
+  "outDir": "dist",
+  treeshake: true,
+  sourcemap: true
+}
